@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         PokéClicker Mini Tools FR — Œufs, Pokédex et AutoClick
 // @namespace    https://www.pokeclicker.com/
-// @version      1.3.0
-// @description  Pokédex, œufs, shiny, auto-route, Pokéballs, quêtes, statistiques et auto-updates.
+// @version      1.4.0
+// @description  Pokédex, œufs, shiny, auto-route, Pokéballs, quêtes, statistiques, sauvegardes, Turbo et auto-updates.
 // @author       PokéClicker Mini Tools
 // @homepageURL  https://github.com/Ironakatina33/Clicker-game/tree/main/pokeclicker-mini-tools
 // @match        https://www.pokeclicker.com/*
