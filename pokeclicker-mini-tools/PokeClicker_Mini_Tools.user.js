@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         PokéClicker Mini Tools FR — Œufs, Pokédex et AutoClick
 // @namespace    https://www.pokeclicker.com/
-// @version      1.3.0
-// @description  Pokédex, œufs, shiny, auto-route, Pokéballs, quêtes, statistiques et auto-updates.
+// @version      1.4.0
+// @description  Pokédex, œufs, shiny, auto-route, Pokéballs, quêtes, statistiques, sauvegardes, Turbo et auto-updates.
 // @author       PokéClicker Mini Tools
 // @homepageURL  https://github.com/Ironakatina33/Clicker-game/tree/main/pokeclicker-mini-tools
 // @match        https://www.pokeclicker.com/*
@@ -40,7 +40,8 @@
     const state = {
         tab: 'eggs', open: false, eggType: 'all', missingOnly: false,
         region: null, search: '', selected: null,
-        cps: Math.max(1, Math.min(20, Number(stored.cps) || 10)),
+        cps: Math.max(1, Math.min(80, Number(stored.cps) || 10)),
+        turbo: !!stored.turbo, catchSpeed: [1,2,4,8].includes(Number(stored.catchSpeed)) ? Number(stored.catchSpeed):1,
         enabled: false, clicks: 0, timer: null,
         dexRegion: stored.dexRegion ?? null, dexFilter: stored.dexFilter || 'missing',
         dexSearch:'', dexPage:0, autoRoute:false, routeMode:stored.routeMode || 'missing',
@@ -48,6 +49,8 @@
         lastRouteChange:0, routeOwnedSince:0, routePrevious:null,
         smartBalls:false, smartRare:Math.max(5,Math.min(100,Number(stored.smartRare)||45)),
         shinyMaster:!!stored.shinyMaster, autoClaim:!!stored.autoClaim,
+        ballMode:stored.ballMode==='native'?'native':'smart', smartRepeat:!!stored.smartRepeat,
+        theme:stored.theme==='night'?'night':'classic',
         shinyTarget:stored.shinyTarget || '',
         notifications:stored.notifications !== false,
         hiddenTabs:Array.isArray(stored.hiddenTabs)?stored.hiddenTabs:[],
@@ -112,6 +115,61 @@
 #${ROOT} .pcmt-tag-good {color:#9fe1ad;} #${ROOT} .pcmt-tag-warn {color:#ffbd87;}
 @media(max-width:540px) {#${ROOT} .pcmt-panel {right:12px;bottom:69px;max-height:70vh;}#${ROOT} .pcmt-fab {right:12px;bottom:12px;}}
 `;
+    // Palette inspirée de l'interface de PokéClicker et d'une Poké Ball.
+    const themeCss = `
+#${ROOT} .pcmt-head::before {content:'';flex-shrink:0;width:27px;height:27px;display:block;border-radius:50%;border:3px solid #172234;background:linear-gradient(#e85652 0 43%,#172234 43% 55%,#fafbfe 55% 100%);box-shadow:0 0 0 2px #fff2,inset 0 0 0 1px #fff3;}
+#${ROOT} .pcmt-head::after {content:'';position:absolute;left:33px;top:25px;width:9px;height:9px;border-radius:50%;border:2px solid #1c2738;background:#fff;pointer-events:none;}
+#${ROOT} .pcmt-head {position:relative;justify-content:flex-start;background:linear-gradient(110deg,#a92235,#d44149);border-bottom:3px solid #f9d55f;}
+#${ROOT} .pcmt-head .pcmt-close{margin-left:auto;background:#fff2;border-color:#fffa;}
+#${ROOT} .pcmt-title,#${ROOT} .pcmt-muted{color:#fff;}
+#${ROOT} .pcmt-panel {background:#f3f6fb;color:#26374f;border:2px solid #24374e;box-shadow:0 14px 50px #0f1b2f77;}
+#${ROOT} .pcmt-content{color:#223349;}
+#${ROOT} .pcmt-tabs{background:#e9eef7;border-bottom:1px solid #ccd6e5;}
+#${ROOT} .pcmt-tab{color:#405473;}
+#${ROOT} .pcmt-tab:hover {background:#dbe4f0;}
+#${ROOT} .pcmt-tab.active{background:#fff;color:#a9263c;box-shadow:inset 0 -3px #d9444e;}
+#${ROOT} .pcmt-card{background:#fff;border-color:#dbe2ed;box-shadow:0 2px 7px #162b4710;}
+#${ROOT} .pcmt-cardtitle{color:#24374e;}
+#${ROOT} .pcmt-note,#${ROOT} .pcmt-small{color:#66758b;}
+#${ROOT} .pcmt-input,#${ROOT} .pcmt-select{background:#fff;border-color:#bdcbdb;color:#26374f;}
+#${ROOT} .pcmt-input:focus,#${ROOT} .pcmt-select:focus{border-color:#e65d64;}
+#${ROOT} .pcmt-chip{background:#f2f6fd;border-color:#ccdaeb;color:#2d4565;}
+#${ROOT} .pcmt-chip.caught{background:#e3f8e9;border-color:#91d4a8;color:#276a45;}
+#${ROOT} .pcmt-chip.missing{background:#fff0e5;border-color:#e7b78f;color:#954b32;}
+#${ROOT} .pcmt-group,#${ROOT} .pcmt-minirow{border-bottom-color:#e0e6ef;}
+#${ROOT} .pcmt-action{background:#c93447;border-color:#9f2838;color:white;}
+#${ROOT} .pcmt-toggle{background:#eef2f8;border-color:#c6d4e4;color:#29415c;}
+#${ROOT} .pcmt-pill{background:#e4edf8;color:#345879;}
+#${ROOT} .pcmt-link{color:#a7283f;}
+#${ROOT} .pcmt-favorites{background:#edf2f9;border-top-color:#d0dce9;}
+#${ROOT} .pcmt-favorites button{background:#fff;border-color:#d0d9e5;color:#405474;}
+#${ROOT} .pcmt-fab{background:#c63545;border:2px solid white;box-shadow:0 0 0 2px #2a334c,0 9px 25px #0008;}
+#${ROOT} .pcmt-fab:hover{background:#a92137;}
+#${ROOT} input[type=range],#${ROOT} .pcmt-switchrow input{accent-color:#c73549;}
+#${ROOT} .pcmt-results{border-color:#d2dce9;}
+#${ROOT} .pcmt-result{color:#2c3c54;border-bottom-color:#e0e6ef;}
+#${ROOT} .pcmt-result:hover{background:#edf3fa;}
+#${ROOT} .pcmt-tag-good{color:#1d8245;}#${ROOT} .pcmt-tag-warn{color:#a85027;}
+#${ROOT} .pcmt-meter{background:#d9e4ef;}#${ROOT} .pcmt-meter > span{background:#d64d56;}
+#${ROOT}.theme-night .pcmt-panel{background:#101b2b;color:#e8f3ff;border-color:#425978;}
+#${ROOT}.theme-night .pcmt-content{color:#e9f3ff;}
+#${ROOT}.theme-night .pcmt-tabs,#${ROOT}.theme-night .pcmt-favorites{background:#111e31;border-color:#30425c;}
+#${ROOT}.theme-night .pcmt-tab{color:#b9cbe1;}
+#${ROOT}.theme-night .pcmt-tab.active{background:#243e5f;color:#fff;}
+#${ROOT}.theme-night .pcmt-card{background:#182941;border-color:#355070;}
+#${ROOT}.theme-night .pcmt-cardtitle{color:#f1f7ff;}
+#${ROOT}.theme-night .pcmt-note,#${ROOT}.theme-night .pcmt-small{color:#b6c4d8;}
+#${ROOT}.theme-night .pcmt-input,#${ROOT}.theme-night .pcmt-select{background:#203951;color:#fff;border-color:#4b6482;}
+#${ROOT}.theme-night .pcmt-toggle,#${ROOT}.theme-night .pcmt-chip,#${ROOT}.theme-night .pcmt-favorites button{background:#26425d;border-color:#4c6b8e;color:#edf5ff;}
+#${ROOT}.theme-night .pcmt-group,#${ROOT}.theme-night .pcmt-minirow{border-bottom-color:#3c506d;}
+#${ROOT}.theme-night .pcmt-pill{background:#264364;color:#d6eafa;}
+#${ROOT}.theme-night .pcmt-result{color:#e8f4ff;border-color:#3b5270;}
+#${ROOT}.theme-night .pcmt-result:hover{background:#2b4b6a;}
+#${ROOT}.theme-night .pcmt-tag-good{color:#92dbb0;}
+#${ROOT} .pcmt-callout{font-size:12px;padding:9px 11px;border-left:3px solid #cf404b;background:#f9ecec;border-radius:5px;color:#513942;margin:9px 0;line-height:1.5;}
+#${ROOT}.theme-night .pcmt-callout{background:#362c39;color:#f7e0e4;}
+#${ROOT} button:focus-visible,#${ROOT} select:focus-visible,#${ROOT} input:focus-visible{outline:2px solid #d44a55;outline-offset:2px;}
+`;
     const clean = (s) => String(s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
     const esc = (s) => String(s ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
     const fmt = (n) => Number(n || 0).toLocaleString('fr-FR');
@@ -138,7 +196,7 @@
     const TAB_LIST = [
         ['eggs','🥚 Œufs'], ['pokemon','🔎 Pokémon'], ['clicker','⚡ Auto'],
         ['shiny','✨ Shiny'], ['dex','📗 Pokédex'], ['routes','🧭 Routes'],
-        ['balls','🔴 Balls'], ['quests','📋 Quêtes'], ['stats','📊 Stats'],
+        ['balls','🔴 Balls'], ['quests','📋 Quêtes'], ['stats','📊 Stats'], ['backups','💾 Saves'],
         ['settings','⚙ Options']
     ];
     let root, panel, content, tabs, fab, favBar;
@@ -172,7 +230,9 @@
 
     function save() {
         try { localStorage.setItem(STORE, JSON.stringify({
-            cps:state.cps,dexRegion:state.dexRegion,dexFilter:state.dexFilter,
+            cps:state.cps,turbo:state.turbo,catchSpeed:state.catchSpeed,
+            ballMode:state.ballMode,smartRepeat:state.smartRepeat,theme:state.theme,
+            dexRegion:state.dexRegion,dexFilter:state.dexFilter,
             routeMode:state.routeMode,routeInterval:state.routeInterval,smartRare:state.smartRare,
             shinyMaster:state.shinyMaster,autoClaim:state.autoClaim,shinyTarget:state.shinyTarget,
             hiddenTabs:state.hiddenTabs,favorites:state.favorites,notifications:state.notifications,
@@ -192,8 +252,8 @@
     }
     function mount() {
         if (document.getElementById(ROOT)) return;
-        root = E('div'); root.id = ROOT; root.classList.toggle('compact',state.compact);
-        const style = E('style'); style.textContent = css;
+        root = E('div'); root.id = ROOT; root.classList.toggle('compact',state.compact); root.classList.toggle('theme-night',state.theme==='night');
+        const style = E('style'); style.textContent = css+themeCss;
         root.appendChild(style);
         fab = E('button', 'pcmt-fab', '⚙ PokéTools');
         fab.type = 'button'; fab.addEventListener('click', () => togglePanel());
@@ -203,7 +263,7 @@
         const head = E('div', 'pcmt-head');
         const titleWrap = E('div');
         titleWrap.appendChild(E('div', 'pcmt-title', 'PokéClicker · Mini Tools'));
-        titleWrap.appendChild(E('div', 'pcmt-muted', 'v1.3.0 · 10 outils configurables'));
+        titleWrap.appendChild(E('div', 'pcmt-muted', 'v1.4.0 · 11 outils configurables'));
         head.appendChild(titleWrap);
         const close = E('button', 'pcmt-close', '×');
         close.type = 'button'; close.setAttribute('aria-label', 'Fermer');
@@ -230,9 +290,13 @@
             if (state.tab === 'stats') renderStats();
             if (state.tab === 'quests') renderQuests();
             if (state.tab === 'routes') updateRoutesStatus();
+            if (state.tab === 'balls') updateBallPreview();
+            if (state.tab === 'backups') refreshBackupsStatus();
         }, 3500);
-        window.addEventListener('pagehide', stopAutoClick);
+        window.addEventListener('pagehide', () => { stopAutoClick(); restoreCatchSpeed(); enableSmartBalls(false); });
         initSession();
+        applyCatchSpeed();
+        setupBackups();
         shinyPoll();
         setInterval(() => { shinyPoll(); pollShinyTarget(); pollSession(); },1000);
         setInterval(() => { autoRouteTick(); autoQuestTick(); },2500);
@@ -257,6 +321,7 @@
         if (state.tab === 'quests') renderQuests();
         if (state.tab === 'stats') renderStats();
         if (state.tab === 'settings') renderSettings();
+        if (state.tab === 'backups') renderBackups();
     }
     function renderEggs() {
         if (state.tab !== 'eggs' || !content) return;
@@ -465,59 +530,93 @@
         }
     }
 
+    function clickBattleTarget() {
+        const gs=GameConstants.GameState,s=App.game.gameState;
+        if(s===gs.fighting)return Battle;
+        if(s===gs.gym)return GymBattle;
+        if(s===gs.dungeon && safe(()=>DungeonRunner.fighting(),false))return DungeonBattle;
+        if(s===gs.temporaryBattle)return TemporaryBattleBattle;
+        return null;
+    }
     function tick() {
         if (!state.enabled) return;
         try {
-            const s = App.game.gameState;
-            const gs = GameConstants.GameState;
-            if (s === gs.fighting) { Battle.clickAttack(); state.clicks++; }
-            else if (s === gs.gym) { GymBattle.clickAttack(); state.clicks++; }
-            else if (s === gs.dungeon && DungeonRunner.fighting()) { DungeonBattle.clickAttack(); state.clicks++; }
-            else if (s === gs.temporaryBattle) { TemporaryBattleBattle.clickAttack(); state.clicks++; }
-        } catch (e) {
-            console.warn('[Poké Mini Tools] Autoclicker arrêté :', e);
-            stopAutoClick(); refreshCounter();
+            const battle=clickBattleTarget();
+            if (!battle || typeof battle.clickAttack!=='function') return;
+            // Standard mode respects game cap. Turbo deliberately raises the manual click
+            // rate by resetting the *click* cooldown only, not combat or game timers.
+            if (state.turbo && Number.isFinite(battle.lastClickAttack))
+                battle.lastClickAttack=Math.min(battle.lastClickAttack,Date.now()-51);
+            const before=safe(()=>Number(App.game.statistics.clickAttacks()),NaN);
+            battle.clickAttack();
+            const after=safe(()=>Number(App.game.statistics.clickAttacks()),NaN);
+            if (Number.isFinite(before)&&Number.isFinite(after)) state.clicks+=Math.max(0,after-before);
+        } catch(e) {
+            console.warn('[Poké Mini Tools] Autoclicker arrêté :',e);
+            stopAutoClick();refreshCounter();notify('Autoclicker arrêté suite à une erreur.');
         }
     }
-    function stopAutoClick() {
-        state.enabled = false;
-        if (state.timer) clearInterval(state.timer);
-        state.timer = null;
+    function stopAutoClick(){state.enabled=false;if(state.timer)clearInterval(state.timer);state.timer=null;}
+    function startAutoClick(){
+        stopAutoClick();state.enabled=true;
+        const delay=Math.max(state.turbo?13:50,Math.round(1000/state.cps));
+        state.timer=setInterval(tick,delay);
     }
-    function startAutoClick() {
-        stopAutoClick();
-        state.enabled = true;
-        state.timer = setInterval(tick, Math.max(50, Math.round(1000 / state.cps)));
+    function refreshCounter(){
+        const status=document.getElementById('pcmt-clicker-status');
+        const button=document.getElementById('pcmt-clicker-toggle');
+        if(status)status.textContent=`${state.enabled?'● Activé':'○ Arrêté'} · ${fmt(state.clicks)} clics effectifs mesurés`;
+        if(button){button.textContent=state.enabled?'Arrêter':'Démarrer';button.classList.toggle('stop',state.enabled);}
     }
-    function refreshCounter() {
-        const status = document.getElementById('pcmt-clicker-status');
-        const button = document.getElementById('pcmt-clicker-toggle');
-        if (status) status.textContent = `${state.enabled ? '● Activé' : '○ Arrêté'} · ${fmt(state.clicks)} appels de clic depuis l’ouverture`;
-        if (button) { button.textContent = state.enabled ? 'Arrêter l’autoclicker' : 'Démarrer l’autoclicker'; button.classList.toggle('stop', state.enabled); }
+    let originalCatchTime=null,catchOwner=null;
+    function restoreCatchSpeed(){
+        if(originalCatchTime&&catchOwner?.calculateCatchTime===patchedCatchTime)
+            catchOwner.calculateCatchTime=originalCatchTime;
+        originalCatchTime=null;catchOwner=null;
     }
-    function renderClicker() {
-        const card = E('div', 'pcmt-card');
-        card.appendChild(E('div', 'pcmt-cardtitle', 'Autoclicker intégré'));
-        card.appendChild(E('p', 'pcmt-note', 'Envoie les clics de combat normaux du jeu, sans accélérer artificiellement les règles du combat. Fonctionne sur les routes, en arène et durant les combats des donjons.'));
-        const status = E('div', 'pcmt-muted'); status.id = 'pcmt-clicker-status'; card.appendChild(status);
-        const speed = E('div', 'pcmt-row');
-        speed.appendChild(E('span', '', 'Vitesse'));
-        const speedValue = E('strong', '', `${state.cps} clics/s`); speed.appendChild(speedValue); card.appendChild(speed);
-        const slider = E('input'); slider.type='range'; slider.min='1'; slider.max='20'; slider.step='1'; slider.value=String(state.cps);
-        slider.setAttribute('aria-label', 'Vitesse en clics par seconde');
-        slider.addEventListener('input', () => {
-            state.cps=Number(slider.value); speedValue.textContent=`${state.cps} clics/s`;
-            save(); if (state.enabled) startAutoClick();
+    function patchedCatchTime(ball){
+        const normal=originalCatchTime.call(this,ball);
+        const factor=[1,2,4,8].includes(state.catchSpeed)?state.catchSpeed:1;
+        return Math.max(40,Math.round(normal/factor));
+    }
+    function applyCatchSpeed(){
+        const manager=safe(()=>App.game.pokeballs,null);
+        if(!manager)return;
+        if(!originalCatchTime){
+            originalCatchTime=manager.calculateCatchTime;
+            if(typeof originalCatchTime!=='function'){originalCatchTime=null;return;}
+            catchOwner=manager;
+        }
+        if(manager.calculateCatchTime!==patchedCatchTime)
+            manager.calculateCatchTime=patchedCatchTime;
+    }
+    function renderClicker(){
+        const card=E('div','pcmt-card');
+        card.appendChild(E('div','pcmt-cardtitle','⚡ Autoclicker'));
+        card.appendChild(E('p','pcmt-note','La vitesse normale du jeu est limitée à 20 clics/s. Le mode Turbo accélère uniquement les attaques manuelles, sans accélérer les cycles du jeu.'));
+        const status=E('div','pcmt-muted');status.id='pcmt-clicker-status';card.appendChild(status);
+        const row=E('div','pcmt-row');row.appendChild(E('span','','Vitesse souhaitée'));
+        const speedValue=E('strong','',`${state.cps} clics/s`);row.appendChild(speedValue);card.appendChild(row);
+        const slider=E('input');slider.type='range';slider.min='1';slider.max=state.turbo?'80':'20';slider.step='1';slider.value=String(Math.min(state.cps,state.turbo?80:20));
+        slider.setAttribute('aria-label','Clics par seconde');slider.oninput=()=>{
+            state.cps=Number(slider.value);speedValue.textContent=`${state.cps} clics/s`;
+            save();if(state.enabled)startAutoClick();
+        };card.appendChild(slider);
+        addSwitch(card,'🚀 Mode Turbo (jusqu’à 80 clics/s)',state.turbo,v=>{
+            state.turbo=v;state.cps=Math.min(state.cps,v?80:20);save();if(state.enabled)startAutoClick();renderClickerReset();
         });
-        card.appendChild(slider);
-        const toggle = E('button', 'pcmt-action'); toggle.id='pcmt-clicker-toggle'; toggle.type='button';
-        toggle.addEventListener('click', () => { if (state.enabled) stopAutoClick(); else startAutoClick(); refreshCounter(); });
-        card.appendChild(toggle);
+        const btn=E('button','pcmt-action');btn.id='pcmt-clicker-toggle';btn.type='button';
+        btn.onclick=()=>{if(state.enabled)stopAutoClick();else startAutoClick();refreshCounter()};card.appendChild(btn);
         content.appendChild(card);
-        content.appendChild(E('p', 'pcmt-note', 'Limité à 20 appels de clic par seconde (le jeu applique ses propres délais). Ne lance pas les combats ni les déplacements automatiquement. Désactive tout autre autoclicker pour éviter les conflits.'));
-        refreshCounter();
+        const capture=E('div','pcmt-card');capture.appendChild(E('div','pcmt-cardtitle','⏩ Animation des captures'));
+        capture.appendChild(E('div','pcmt-note','Accélère le délai d’attente après l’envoi d’une Ball (routes, donjons, ferme…), sans modifier les chances de capture.'));
+        addSelect(capture,[[1,'Normale (×1)'],[2,'Rapide (×2)'],[4,'Très rapide (×4)'],[8,'Instantanée ou presque (×8)']],state.catchSpeed,v=>{
+            state.catchSpeed=Number(v);save();applyCatchSpeed();notify('Capture : vitesse ×'+v);
+        });
+        capture.appendChild(E('div','pcmt-callout','Le Turbo sollicite davantage le jeu. Si tu constates des ralentissements ou utilises un autre autoclicker, réduis la vitesse.'));
+        content.appendChild(capture);refreshCounter();
     }
-
+    function renderClickerReset(){if(state.open&&state.tab==='clicker')render();}
 
     // Shiny : estimateur de temps, fondé sur les statistiques réelles du jeu.
     // Ne prédit pas le prochain tirage ; chaque rencontre est indépendante.
@@ -698,6 +797,7 @@
             return {id,pokemons,missing:pokemons.filter(x=>!caught(x)),available};
         });
     }
+
     // 1) Assistant de collection : accès direct confirmé vs pistes possibles.
     function nativeRegion(p) {
         return Number(safe(()=>PokemonHelper.calcNativeRegion(p.name),p.nativeRegion??-1));
@@ -966,82 +1066,124 @@
         addRow(box,'90 % de chances en',durationLong(countProb(.9)/rate));
     }
 
-    // 5) Pokéballs : choisir sans jamais attribuer de Master Ball automatiquement
-    // sauf si l'utilisateur active expressément l'option.
+    // Pokéballs intelligentes : intercepte uniquement la sélection de Ball,
+    // sans modifier les filtres stockés dans la sauvegarde.
     let originalBallPicker=null,ballOwner=null;
-    function autoBallChoice(game,id,isShiny,isShadow,encounterType){
-        if (!state.smartBalls || !originalBallPicker) return originalBallPicker.call(game,id,isShiny,isShadow,encounterType);
-        const P=GameConstants.Pokeball, pokes=game.pokeballs;
-        const data=safe(()=>PokemonHelper.getPokemonById(id),null);
-        const name=data?.name || '';
-        // Les Ultra-Chimères imposent les Beast Balls : respecter cette règle native.
-        if (safe(()=>GameConstants.UltraBeastType[name]!==undefined,false))return originalBallPicker.call(game,id,isShiny,isShadow,encounterType);
-        if (isShadow)return originalBallPicker.call(game,id,isShiny,isShadow,encounterType);
-        const have=id2=>Number(safe(()=>pokes[id2].quantity(),0))>0 &&
-            safe(()=>pokes[id2].unlocked(),true);
-        const newShiny=!!isShiny&&!safe(()=>App.game.party.alreadyCaughtPokemon(id,true),false);
-        const newPokemon=!safe(()=>App.game.party.alreadyCaughtPokemon(id),false);
-        let requested;
-        if (newShiny){
-            const allowMaster=state.shinyMaster&&!safe(()=>App.game.challenges.list.disableMasterballs.active(),false);
-            requested=allowMaster && have(P.Masterball) ? P.Masterball:P.Ultraball;
-        } else if (newPokemon){
-            const catchRate=Number(data?.catchRate);
-            requested=Number.isFinite(catchRate)&&catchRate<=state.smartRare ? P.Ultraball:P.Greatball;
-        } else if (isShiny){requested=P.Greatball;}
-        else {requested=P.Pokeball;}
-        if(have(requested))return requested;
-        // La chute du stock n'autorise jamais une Masterball non voulue.
-        for(const next of [P.Ultraball,P.Greatball,P.Pokeball]){
-            if(Number(next)<=Number(requested) && have(next))return next;
+    const ballHistory=[];
+    function ballLabel(id){
+        const name=GameConstants.Pokeball?.[id];
+        const table={Pokeball:'Poké Ball',Greatball:'Super Ball',Ultraball:'Hyper Ball',Masterball:'Master Ball',Beastball:'Ultra Ball'};
+        return table[name]||name||'Aucune Ball';
+    }
+    function chooseSmartBall(game,id,isShiny,isShadow,encounterType,forPreview=false){
+        const P=GameConstants.Pokeball,stock=game.pokeballs;
+        const data=safe(()=>PokemonHelper.getPokemonById(id),null),name=data?.name||'?';
+        const old=()=>safe(()=>originalBallPicker.call(game,id,isShiny,isShadow,encounterType),P.None);
+        const ultraBeast=safe(()=>GameConstants.UltraBeastType[name]!==undefined,false);
+        if(isShadow||ultraBeast){return {id:old(),reason:'Règles spéciales natives (Obscur / Ultra-Chimère)'};}
+        const owned=!!safe(()=>App.game.party.alreadyCaughtPokemon(id),false);
+        const alreadyShiny=!!safe(()=>App.game.party.alreadyCaughtPokemon(id,true),false);
+        const shinyNew=!!isShiny&&!alreadyShiny;
+        const qty=(k)=>Number(safe(()=>stock[k].quantity(),0));
+        const available=k=>Number.isInteger(k)&&k>=0&&qty(k)>0&&safe(()=>stock[k].unlocked(),true);
+        if(state.ballMode==='native'){
+            const choice=old();
+            if(choice!==P.None && available(choice))return {id:choice,reason:'Filtre natif prioritaire'};
         }
-        return P.None;
+        if(!isShiny&&owned&&!state.smartRepeat)return {id:P.None,reason:'Déjà capturé : économiser les Balls'};
+        const rarity=Number(data?.catchRate);
+        let want,reason;
+        if(shinyNew){
+            const allowMaster=state.shinyMaster&&!safe(()=>App.game.challenges.list.disableMasterballs.active(),false);
+            want=allowMaster&&available(P.Masterball)?P.Masterball:P.Ultraball;
+            reason='Nouveau shiny : priorité de capture';
+        }else if(isShiny){want=P.Ultraball;reason='Shiny déjà connu';}
+        else if(!owned && Number.isFinite(rarity) && rarity<=state.smartRare){want=P.Ultraball;reason='Nouveau Pokémon, taux de capture faible';}
+        else if(!owned){want=P.Greatball;reason='Nouveau Pokémon';}
+        else {want=P.Pokeball;reason='Capture répétée';}
+        let choice=P.None;
+        const ladder=want===P.Masterball?[P.Masterball,P.Ultraball,P.Greatball,P.Pokeball]:
+            want===P.Ultraball?[P.Ultraball,P.Greatball,P.Pokeball]:
+            want===P.Greatball?[P.Greatball,P.Pokeball]:[P.Pokeball];
+        choice=ladder.find(available)??P.None;
+        if(choice===P.None)reason+=' · plus de Balls utilisables';
+        return {id:choice,reason};
     }
     function enableSmartBalls(enabled){
         const manager=safe(()=>App.game.pokeballs,null);
-        if(!manager){notify('Les Pokéballs ne sont pas encore disponibles.');return false;}
+        if(!manager){notify('Système de Balls indisponible.');return false;}
         if(enabled){
             if(!originalBallPicker){
                 originalBallPicker=manager.calculatePokeballToUse;
-                if(typeof originalBallPicker!=='function')return false;
+                if(typeof originalBallPicker!=='function') {originalBallPicker=null;notify('Fonction de capture introuvable.');return false;}
                 ballOwner=manager;
-                manager.calculatePokeballToUse=function(id,isShiny,isShadow,encounterType){
-                    return autoBallChoice(this,id,isShiny,isShadow,encounterType);
-                };
             }
+            manager.calculatePokeballToUse=function(id,isShiny,isShadow,encounterType){
+                try{
+                    const result=chooseSmartBall(this,id,isShiny,isShadow,encounterType);
+                    const name=safe(()=>PokemonHelper.getPokemonById(id).name,'Pokémon');
+                    ballHistory.unshift({name,ball:ballLabel(result.id),reason:result.reason,at:Date.now()});
+                    ballHistory.length=Math.min(ballHistory.length,10);
+                    return result.id;
+                }catch(e){
+                    console.warn('[PokéTools] Choix de Ball : retour aux filtres natifs',e);
+                    return originalBallPicker.call(this,id,isShiny,isShadow,encounterType);
+                }
+            };
             state.smartBalls=true;
-        } else {
+        }else{
             state.smartBalls=false;
-            if(originalBallPicker&&ballOwner?.calculatePokeballToUse){
-                ballOwner.calculatePokeballToUse=originalBallPicker;
-            }
+            if(originalBallPicker && ballOwner)ballOwner.calculatePokeballToUse=originalBallPicker;
             originalBallPicker=null;ballOwner=null;
         }
         return true;
     }
+    function updateBallPreview(){
+        const box=document.getElementById('pcmt-ball-preview');if(!box)return;
+        box.replaceChildren();
+        const enemy=safe(()=>Battle.enemyPokemon?.(),null);
+        if(!enemy){box.appendChild(E('div','pcmt-note','Aucun Pokémon en combat pour le moment.'));return;}
+        const name=String(enemy.name||'Pokémon');
+        const owned=safe(()=>App.game.party.alreadyCaughtPokemon(enemy.id),false);
+        const label=E('div','pcmt-group',`${display(name)} · ${enemy.shiny?'✨ Shiny · ':''}${owned?'Déjà capturé':'Manquant'}`);
+        box.appendChild(label);
+        // Prévision sans appeler la fonction native pour ne pas produire d'effets secondaires.
+        if(state.ballMode==='native'){
+            box.appendChild(E('div','pcmt-note','Mode natif prioritaire : le choix effectif est affiché dans l’historique de capture.'));
+        }else{
+            const r=chooseSmartBall(App.game.pokeballs,enemy.id,!!enemy.shiny,
+                Number(enemy.shadow)===Number(GameConstants.ShadowStatus?.Shadow),enemy.encounterType,true);
+            box.appendChild(E('div','pcmt-cardtitle',`${ballLabel(r.id)} · ${r.reason}`));
+        }
+        if(ballHistory.length){
+            box.appendChild(E('div','pcmt-cardtitle','Derniers choix'));
+            for(const item of ballHistory.slice(0,4))box.appendChild(E('div','pcmt-small',`${display(item.name)} : ${item.ball} — ${item.reason}`));
+        }
+    }
     function renderBalls(){
-        const card=E('div','pcmt-card');
-        card.appendChild(E('div','pcmt-cardtitle','🔴 Pokéballs intelligentes'));
-        card.appendChild(E('p','pcmt-note','Désactivé par défaut. En l’activant, PokéTools choisit temporairement la ball au moment de la capture : nouveau shiny, nouveau Pokémon, rareté estimée par taux de capture, puis stock disponible. Les filtres natifs restent inchangés et reviennent à l’arrêt.'));
-        const status=E('div','pcmt-note',state.smartBalls?'● Choix automatique actif':'○ Choix automatique arrêté');card.appendChild(status);
-        addButton(card,state.smartBalls?'⏹ Désactiver':'▶ Activer',()=>{
-            enableSmartBalls(!state.smartBalls);renderBalls();
-        },`pcmt-action ${state.smartBalls?'stop':''}`);
-        const rare=E('div','pcmt-card');
-        rare.appendChild(E('div','pcmt-cardtitle',`Taux de capture « rare » : ${state.smartRare} ou moins`));
-        const slider=E('input');slider.type='range';slider.min=5;slider.max=100;slider.step=5;slider.value=state.smartRare;
-        slider.onchange=()=>{state.smartRare=Number(slider.value);save();renderBalls()};rare.appendChild(slider);
-        addSwitch(rare,'Autoriser la Master Ball sur un nouveau shiny',state.shinyMaster,v=>{
-            state.shinyMaster=v;save();renderBalls();
+        const card=E('div','pcmt-card');card.appendChild(E('div','pcmt-cardtitle','🔴 Pokéballs intelligentes'));
+        card.appendChild(E('div','pcmt-note','Règles claires, sans modifier tes filtres enregistrés. Toutes les décisions passent par le système de capture de PokéClicker.'));
+        addSwitch(card,'Activer le choix automatique',state.smartBalls,v=>{
+            enableSmartBalls(v);render();notify(v?'Balls intelligentes activées':'Retour aux filtres du jeu');
         });
-        rare.appendChild(E('div','pcmt-note','Par défaut : Ultra Ball pour nouveau shiny, Ultra Ball pour Pokémon difficile à capturer, Great Ball pour nouveau Pokémon, Poké Ball pour Pokémon déjà capturé. Retour aux balls moins puissantes si le stock manque. Les Ultra-Chimères et Pokémon obscurs gardent les règles natives.'));
-        content.appendChild(card);content.appendChild(rare);
-        const stocks=E('div','pcmt-card');stocks.appendChild(E('div','pcmt-cardtitle','Stock de balls'));
+        addSelect(card,[['smart','PokéTools prioritaire'],['native','Respecter d’abord mes filtres du jeu']],state.ballMode,v=>{
+            state.ballMode=v;save();render();
+        });
+        addSwitch(card,'Capturer aussi les Pokémon déjà possédés',state.smartRepeat,v=>{state.smartRepeat=v;save();render();});
+        addSwitch(card,'Autoriser Master Ball sur un NOUVEAU shiny',state.shinyMaster,v=>{state.shinyMaster=v;save();render();});
+        card.appendChild(E('div','pcmt-note',`Pokémon difficiles : seuil ≤ ${state.smartRare} de taux de capture`));
+        const slider=E('input');slider.type='range';slider.min=5;slider.max=100;slider.step=5;slider.value=state.smartRare;
+        slider.oninput=()=>{state.smartRare=Number(slider.value);save();render();};card.appendChild(slider);
+        card.appendChild(E('div','pcmt-callout','Priorité : shiny inconnu → Hyper Ball ; Pokémon rare → Hyper Ball ; nouveau Pokémon → Super Ball ; déjà possédé → aucun lancer, sauf option activée. Repli selon les stocks.'));
+        content.appendChild(card);
+        const preview=E('div','pcmt-card');preview.appendChild(E('div','pcmt-cardtitle','Aperçu / diagnostic'));
+        const box=E('div');box.id='pcmt-ball-preview';preview.appendChild(box);content.appendChild(preview);
+        const stocks=E('div','pcmt-card');stocks.appendChild(E('div','pcmt-cardtitle','Stock actuel'));
         for(const name of ['Pokeball','Greatball','Ultraball','Masterball','Beastball']){
             const id=GameConstants.Pokeball?.[name];
-            if(Number.isFinite(Number(id)))addRow(stocks,name,fmt(safe(()=>App.game.pokeballs.getBallQuantity(id),0)));
+            if(Number.isInteger(id))addRow(stocks,ballLabel(id),fmt(safe(()=>App.game.pokeballs.getBallQuantity(id),0)));
         }
-        content.appendChild(stocks);
+        content.appendChild(stocks);updateBallPreview();
     }
 
     // 6) Assistant quêtes. Validation via claimQuest pour garder les effets natifs.
@@ -1138,10 +1280,127 @@
         content.appendChild(card);
     }
 
+    // Sauvegarde : export officiel + rotation de 5 snapshots IndexedDB par slot.
+    const BACKUP_DB='pcmt-pokeclicker-backups';
+    const BACKUP_INTERVAL=20*60*1000;
+    let backupDbPromise=null,lastBackupAt=0;
+    const currentSlot=()=>String(safe(()=>Save.key,''));
+    function backupDatabase(){
+        if(!('indexedDB' in window))return Promise.reject(new Error('IndexedDB indisponible'));
+        if(!backupDbPromise)backupDbPromise=new Promise((resolve,reject)=>{
+            const request=indexedDB.open(BACKUP_DB,1);
+            request.onupgradeneeded=()=>{if(!request.result.objectStoreNames.contains('snapshots'))request.result.createObjectStore('snapshots',{keyPath:'id'});};
+            request.onsuccess=()=>resolve(request.result);
+            request.onerror=()=>reject(request.error);
+        }).catch(err=>{backupDbPromise=null;throw err;});
+        return backupDbPromise;
+    }
+    function backupTx(mode,handler){return backupDatabase().then(db=>new Promise((resolve,reject)=>{
+        const tx=db.transaction('snapshots',mode),store=tx.objectStore('snapshots');
+        let result;
+        tx.oncomplete=()=>resolve(result);
+        tx.onerror=()=>reject(tx.error||new Error('Erreur IndexedDB'));
+        tx.onabort=()=>reject(tx.error||new Error('Sauvegarde annulée'));
+        try{result=handler(store);}catch(e){tx.abort();reject(e);}
+    }));}
+    function allSnapshots(){return backupDatabase().then(db=>new Promise((resolve,reject)=>{
+        const tx=db.transaction('snapshots','readonly'),req=tx.objectStore('snapshots').getAll();
+        req.onsuccess=()=>resolve((req.result||[]).filter(x=>x.slot===currentSlot()).sort((a,b)=>b.date-a.date));
+        req.onerror=()=>reject(req.error);
+    }));}
+    function snapshotPayload(){
+        if(typeof Save==='undefined'||typeof Settings==='undefined')throw new Error('Sauvegarde du jeu non disponible');
+        const payload=JSON.parse(JSON.stringify({player,save:Save.getSaveObject(),settings:Settings.toJSON()}));
+        if(!payload?.player||!payload?.save||!payload?.settings)throw new Error('Sauvegarde incomplète');
+        return payload;
+    }
+    async function createBackup(type='manual',quiet=false){
+        try{
+            const payload=snapshotPayload(),date=Date.now(),slot=currentSlot();
+            const record={id:`${slot}|${date}|${Math.random().toString(36).slice(2,7)}`,date,slot,type,payload};
+            await backupTx('readwrite',s=>s.put(record));
+            const all=await allSnapshots();
+            if(all.length>5){await backupTx('readwrite',s=>all.slice(5).forEach(x=>s.delete(x.id)));}
+            lastBackupAt=date;
+            if(!quiet)notify('💾 Copie locale enregistrée.');
+            if(state.open&&state.tab==='backups')await renderBackups();
+            return true;
+        }catch(e){console.warn('[PokéTools] sauvegarde',e);if(!quiet)notify('Échec de la sauvegarde locale : '+e.message);return false;}
+    }
+    async function restoreSnapshot(id){
+        const snapshots=await allSnapshots(),snap=snapshots.find(x=>x.id===id);
+        if(!snap?.payload?.player||!snap?.payload?.save)throw new Error('Sauvegarde introuvable ou incorrecte');
+        if(!window.confirm('Restaurer cette copie ? La progression actuelle sera remplacée. Exporte d’abord ta sauvegarde si tu veux la conserver.'))return;
+        // Replace local storage then suppress the game's onbeforeunload autosave.
+        const slot=currentSlot(),data=snap.payload;
+        localStorage.setItem(`player${slot}`,JSON.stringify(data.player));
+        localStorage.setItem(`save${slot}`,JSON.stringify(data.save));
+        if(data.settings)localStorage.setItem(`settings${slot}`,JSON.stringify(data.settings));
+        window.onbeforeunload=()=>{};
+        location.reload();
+    }
+    function refreshBackupsStatus(){
+        const el=document.getElementById('pcmt-backup-status');if(!el)return;
+        allSnapshots().then(list=>{
+            if(document.getElementById('pcmt-backup-status')===el)
+                el.textContent=`${list.length} copie(s) locales · Dernière : ${list[0]?new Date(list[0].date).toLocaleString('fr-FR'):'aucune'}`;
+        }).catch(()=>el.textContent='Stockage de copies indisponible');
+    }
+    async function renderBackups(){
+        if(!state.open||state.tab!=='backups')return;
+        content.replaceChildren();
+        const card=E('div','pcmt-card');
+        card.appendChild(E('div','pcmt-cardtitle','💾 Protéger ma progression'));
+        card.appendChild(E('div','pcmt-callout','Les copies automatiques sont enregistrées dans CE navigateur : elles disparaissent si tu effaces ses données. Exporte régulièrement un fichier sur ton PC pour éviter toute perte définitive.'));
+        addButton(card,'⬇ Exporter la sauvegarde officielle',async()=>{
+            try{await Save.download();notify('Téléchargement demandé au jeu. Vérifie ton dossier Téléchargements.');}
+            catch(e){console.warn(e);notify('Erreur d’export : '+e.message);}
+        },'pcmt-action');
+        addButton(card,'💾 Créer une copie locale maintenant',()=>createBackup('manual'),'pcmt-toggle');
+        const inp=E('input');inp.type='file';inp.accept='.txt,.sav,.json';inp.style.display='none';
+        inp.onchange=()=>{
+            const file=inp.files?.[0];if(!file)return;
+            if(window.confirm('Importer ce fichier de sauvegarde ? La progression actuelle sera remplacée. Fais un export de ta partie avant.')){
+                createBackup('before-import',true).finally(()=>safe(()=>Save.loadFromFile(file)));
+            }
+            inp.value='';
+        };
+        card.appendChild(inp);
+        addButton(card,'↥ Importer une sauvegarde PokéClicker',()=>inp.click(),'pcmt-toggle');
+        card.appendChild(E('p','pcmt-note','Copies automatiques toutes les 20 minutes (cinq dernières conservées). Les fichiers sont téléchargés au format officiel du jeu.'));
+        content.appendChild(card);
+        const card2=E('div','pcmt-card');card2.appendChild(E('div','pcmt-cardtitle','Historique des copies locales'));
+        const info=E('div','pcmt-note','Chargement des copies…');info.id='pcmt-backup-status';card2.appendChild(info);
+        content.appendChild(card2);
+        try{
+            const copies=await allSnapshots();
+            if(!state.open||state.tab!=='backups'||!card2.isConnected)return;
+            for(const item of copies){
+                const row=E('div','pcmt-minirow');
+                const label=E('div','',new Date(item.date).toLocaleString('fr-FR')+` · ${item.type==='manual'?'Manuelle':item.type==='before-import'?'Avant import':'Auto'}`);
+                row.appendChild(label);
+                addButton(row,'Restaurer',()=>restoreSnapshot(item.id).catch(e=>notify(e.message)),'pcmt-toggle');
+                card2.appendChild(row);
+            }
+            refreshBackupsStatus();
+        }catch(e){info.textContent='Copies indisponibles : '+e.message;}
+    }
+    function setupBackups(){
+        // No remote upload; snapshots stay in the site's IndexedDB.
+        backupDatabase().then(()=>allSnapshots()).then(list=>{
+            if(!list.length)return createBackup('auto',true);
+            lastBackupAt=list[0].date;
+        }).catch(e=>console.warn('[PokéTools] Copies locales indisponibles',e));
+        setInterval(()=>{
+            if(Date.now()-lastBackupAt>=BACKUP_INTERVAL)createBackup('auto',true);
+        },60000);
+    }
+
     // 8) Options, visibilité, favoris et raccourcis.
     function renderSettings(){
         const card=E('div','pcmt-card');
         card.appendChild(E('div','pcmt-cardtitle','⚙ Interface et raccourcis'));
+        addSelect(card,[['classic','Poké Ball · clair'],['night','Nuit · sombre']],state.theme,v=>{state.theme=v;root.classList.toggle('theme-night',v==='night');save();});
         addSwitch(card,'Mode compact',state.compact,v=>{
             state.compact=v;root.classList.toggle('compact',v);save();
         });
@@ -1161,7 +1420,7 @@
         }
         content.appendChild(modules);
         const info=E('div','pcmt-card');info.appendChild(E('div','pcmt-cardtitle','Mises à jour et sécurité'));
-        info.appendChild(E('div','pcmt-note','Version 1.3.0. Tampermonkey télécharge les versions depuis GitHub via les liens @updateURL et @downloadURL présents dans le script. Les automatisations de déplacement et de capture restent désactivées après chaque rechargement.'));
+        info.appendChild(E('div','pcmt-note','Version 1.4.0. Tampermonkey télécharge les versions depuis GitHub via les liens @updateURL et @downloadURL présents dans le script. Les automatisations de déplacement et de capture restent désactivées après chaque rechargement.'));
         const link=E('a','pcmt-link','Consulter le script sur GitHub ↗');
         link.href='https://github.com/Ironakatina33/Clicker-game/tree/main/pokeclicker-mini-tools';link.target='_blank';link.rel='noopener noreferrer';info.appendChild(link);
         content.appendChild(info);
@@ -1179,6 +1438,6 @@
             if (++attempts > 180) { clearInterval(waiter); console.warn('[Poké Mini Tools] Le jeu n’a pas été détecté.'); }
         }, 1000);
     }
-    window.PokeMiniTools = { version:'1.3.0', open: () => togglePanel(true), close: () => togglePanel(false), stop: stopAutoClick };
+    window.PokeMiniTools = { version:'1.4.0', open: () => togglePanel(true), close: () => togglePanel(false), stop: stopAutoClick };
     boot();
 })();
