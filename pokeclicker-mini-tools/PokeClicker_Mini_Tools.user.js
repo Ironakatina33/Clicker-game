@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         PokéClicker Mini Tools FR — Œufs, Pokédex et AutoClick
 // @namespace    https://www.pokeclicker.com/
-// @version      1.4.0
-// @description  Pokédex, œufs, shiny, auto-route, Pokéballs, quêtes, statistiques, sauvegardes, Turbo et auto-updates.
+// @version      1.5.0
+// @description  PokéTools 1.5 : HUD shiny, tableau de bord, nouveaux thèmes et outils complets avec mises à jour auto.
 // @author       PokéClicker Mini Tools
 // @homepageURL  https://github.com/Ironakatina33/Clicker-game/tree/main/pokeclicker-mini-tools
 // @match        https://www.pokeclicker.com/*
@@ -56,6 +56,9 @@
         hiddenTabs:Array.isArray(stored.hiddenTabs)?stored.hiddenTabs:[],
         favorites:Array.isArray(stored.favorites)?stored.favorites:['eggs','dex','shiny'],
         compact:!!stored.compact,
+        hudVisible: stored.hudVisible !== false,
+        hudCollapsed:!!stored.hudCollapsed,
+        hudSide:stored.hudSide==='left'?'left':'right',
 
     };
     const css = `
@@ -170,6 +173,119 @@
 #${ROOT}.theme-night .pcmt-callout{background:#362c39;color:#f7e0e4;}
 #${ROOT} button:focus-visible,#${ROOT} select:focus-visible,#${ROOT} input:focus-visible{outline:2px solid #d44a55;outline-offset:2px;}
 `;
+    // Refonte 1.5 : une identité propre à PokéTools, sans ressources externes.
+    const polishCss = `
+#${ROOT}{--pc-red:#de4950;--pc-red-deep:#b93043;--pc-ink:#233248;--pc-muted:#687a8d;--pc-line:#e6e9ef;--pc-paper:#f5f6f9;--pc-white:#fff;--pc-blue:#365d87;--pc-gold:#f7c45f;--pc-green:#268b66;--pc-shadow:0 18px 54px rgba(17,28,48,.26);font-family:system-ui,-apple-system,'Segoe UI',sans-serif;letter-spacing:0}
+#${ROOT} button{transition:transform .14s ease,background .18s ease,box-shadow .18s ease,border-color .18s ease}
+#${ROOT} button:active{transform:scale(.97)}
+#${ROOT} .pcmt-panel{width:min(515px,calc(100vw - 22px));max-height:min(84vh,790px);border-radius:22px;border:1px solid rgba(38,50,74,.22);background:var(--pc-paper);color:var(--pc-ink);box-shadow:var(--pc-shadow);bottom:79px;right:18px;isolation:isolate;animation:pcmt-panel-in .21s cubic-bezier(.2,.8,.2,1) both}
+#${ROOT} .pcmt-head{min-height:100px;display:flex;align-items:center;gap:14px;padding:16px 18px 17px;background:linear-gradient(116deg,#25374f,#142338);border-bottom:0;overflow:hidden;position:relative}
+#${ROOT} .pcmt-head::before{content:none}
+#${ROOT} .pcmt-head::after{content:'';position:absolute;right:-38px;top:-91px;left:auto;width:220px;height:220px;opacity:.12;border:26px solid white;background:radial-gradient(circle at center,transparent 0 18%,white 18% 23%,transparent 24%);border-radius:50%;pointer-events:none}
+#${ROOT} .pcmt-emblem{position:relative;width:45px;height:45px;min-width:45px;overflow:hidden;border:3px solid #fff;border-radius:50%;background:linear-gradient(#eb6264 0 46%,#263247 46% 55%,#fbfcfe 55%);box-shadow:0 0 0 3px rgba(255,255,255,.13),0 8px 17px rgba(0,0,0,.23)}
+#${ROOT} .pcmt-emblem::after{content:'';position:absolute;width:13px;height:13px;border-radius:50%;left:calc(50% - 6.5px);top:calc(50% - 6.5px);background:#f7f9ff;border:3px solid #253247;box-shadow:0 0 0 1px #fff}
+#${ROOT} .pcmt-head .pcmt-title{font-size:20px;line-height:1.1;color:white;font-weight:850;letter-spacing:-.65px}
+#${ROOT} .pcmt-head .pcmt-muted{font-size:10px;letter-spacing:1.1px;color:#acbfd3;margin-top:6px;font-weight:650}
+#${ROOT} .pcmt-head .pcmt-close{margin-left:auto;z-index:1;line-height:1;font-size:22px;border:1px solid #64748970;background:#fff1;border-radius:11px;padding:8px 11px;color:#e5edf7;align-self:flex-start}
+#${ROOT} .pcmt-head .pcmt-close:hover{background:#fff3}
+#${ROOT} .pcmt-header-status{padding:8px 17px;display:flex;gap:10px;align-items:center;justify-content:space-between;background:var(--pc-white);color:var(--pc-muted);border-bottom:1px solid var(--pc-line);font-size:11px;font-weight:650}
+#${ROOT} .pcmt-live-dot{display:inline-block;width:7px;height:7px;background:#3cba86;border-radius:100%;box-shadow:0 0 0 3px #3cba8626;margin-right:6px}
+#${ROOT} .pcmt-tabs{padding:10px 11px 12px;display:flex;gap:7px;overflow-x:auto;scroll-snap-type:x proximity;flex-wrap:nowrap;border-bottom:1px solid var(--pc-line);background:#fff;scrollbar-color:#cad0dc transparent}
+#${ROOT} .pcmt-tabs .pcmt-tab{padding:8px 11px;scroll-snap-align:start;min-height:34px;font-size:11px;border-radius:9px;font-weight:750;border:1px solid transparent;background:#f2f3f7;color:#617187}
+#${ROOT} .pcmt-tabs .pcmt-tab:hover{background:#e9edf5;color:#253e5d}
+#${ROOT} .pcmt-tabs .pcmt-tab.active{background:#263b58;border-color:#263b58;color:#fff;box-shadow:none}
+#${ROOT} .pcmt-favorites{padding:8px 14px;background:#fbfbfe;border-top:0;border-bottom:1px solid var(--pc-line);gap:7px}
+#${ROOT} .pcmt-favorites button{border-radius:8px;background:white;color:#4a5c73;border:1px solid #e2e5ed;padding:5px 10px;font-size:10px;font-weight:650}
+#${ROOT} .pcmt-content{padding:17px;background:radial-gradient(circle at 100% 0%,#f1eff2,transparent 42%),#f6f7fa;min-height:235px;color:var(--pc-ink);scrollbar-color:#c4cad5 transparent}
+#${ROOT} .pcmt-card{background:#fff;border:1px solid #e6e9f0;border-radius:15px;padding:15px 16px;margin:0 0 12px;box-shadow:0 5px 18px rgba(35,49,75,.045)}
+#${ROOT} .pcmt-cardtitle{font-size:14px;color:#26364c;font-weight:800;letter-spacing:-.15px;margin-bottom:9px}
+#${ROOT} .pcmt-note,#${ROOT} .pcmt-small{color:#748094;line-height:1.52}
+#${ROOT} .pcmt-note{font-size:12px}
+#${ROOT} .pcmt-row{gap:11px}
+#${ROOT} .pcmt-minirow,#${ROOT} .pcmt-group{border-bottom:1px solid #eef0f4;padding:9px 0;gap:12px}
+#${ROOT} .pcmt-minirow strong,#${ROOT} .pcmt-group strong{color:#354963;max-width:48%;text-align:right}
+#${ROOT} .pcmt-input,#${ROOT} .pcmt-select{border:1px solid #dee4eb;border-radius:10px;padding:11px 12px;background:#fafbfd;color:#273a53;min-height:38px}
+#${ROOT} .pcmt-input:focus,#${ROOT} .pcmt-select:focus{border-color:#d64855;box-shadow:0 0 0 3px #d6485518}
+#${ROOT} .pcmt-action{background:#cb3d4d;border:0;border-radius:10px;color:white;padding:10px 14px;font-size:12px;box-shadow:0 4px 10px #cb3d4d19}
+#${ROOT} .pcmt-action:hover{background:#b62d40;box-shadow:0 5px 12px #cb3d4d30}
+#${ROOT} .pcmt-toggle{background:#f4f6fa;border-color:#e1e5ed;color:#34506b;border-radius:9px;padding:8px 11px}
+#${ROOT} .pcmt-toggle:hover{background:#ecf1f8;border-color:#b6c4d6}
+#${ROOT} .pcmt-chip{background:#f5f8fc;border-color:#dae2ec;border-radius:9px;padding:7px 10px;color:#314b68;font-weight:620}
+#${ROOT} .pcmt-chip.caught{background:#e9f7ee;border-color:#bce0ca;color:#27734b}
+#${ROOT} .pcmt-chip.missing{background:#fff3e7;border-color:#f0cfab;color:#a35b35}
+#${ROOT} .pcmt-pill{background:#eff3f9;color:#516c8b;border-radius:7px;padding:4px 7px}
+#${ROOT} .pcmt-fab{right:19px;bottom:17px;border:1px solid #d6e0ec;border-radius:14px;padding:12px 18px;background:#263b56;color:#fff;box-shadow:0 12px 28px rgba(17,31,55,.24);font-size:13px;font-weight:790;letter-spacing:-.1px;display:flex;align-items:center;gap:9px}
+#${ROOT} .pcmt-fab:hover{background:#345070;transform:translateY(-2px)}
+#${ROOT} .pcmt-fab .pcmt-fab-orb{display:inline-block;width:17px;height:17px;border-radius:50%;border:2px solid #e7eef7;position:relative;background:linear-gradient(#e04b56 0 43%,#20324b 43% 55%,white 55%)}
+#${ROOT} .pcmt-fab .pcmt-fab-orb::after{content:'';position:absolute;left:4px;top:4px;width:5px;height:5px;background:#fff;border-radius:50%;border:1px solid #1c3450}
+#${ROOT} .pcmt-toast{background:#263b56;border-color:#7593b7;border-radius:10px}
+#${ROOT} .pcmt-pagehero{position:relative;overflow:hidden;background:linear-gradient(125deg,#2a405e,#15263b);color:white;border-radius:16px;padding:20px;margin-bottom:13px}
+#${ROOT} .pcmt-pagehero::after{content:'◓';position:absolute;right:-4px;top:-48px;font-size:175px;line-height:1;color:#ffffff12;pointer-events:none}
+#${ROOT} .pcmt-kicker{font-size:10px;letter-spacing:1.55px;text-transform:uppercase;font-weight:800;color:#fbcb72}
+#${ROOT} .pcmt-pagehero h2{margin:8px 0;font-size:24px;line-height:1.1;font-weight:850;letter-spacing:-.6px;color:#fff}
+#${ROOT} .pcmt-pagehero p{margin:0;color:#bdcad8;font-size:12px;max-width:300px;line-height:1.55}
+#${ROOT} .pcmt-dash-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:12px}
+#${ROOT} .pcmt-dash-tile{background:#fff;border:1px solid #e5e9f0;border-radius:13px;padding:14px 13px;text-align:left;display:flex;flex-direction:column;gap:7px;color:#304763;min-height:99px}
+#${ROOT} .pcmt-dash-tile:hover{transform:translateY(-2px);border-color:#b0c3d7;box-shadow:0 7px 15px #1e355615}
+#${ROOT} .pcmt-dash-icon{font-size:22px;line-height:1}
+#${ROOT} .pcmt-dash-tile strong{font-size:13px;color:#2b3f58;font-weight:800}
+#${ROOT} .pcmt-dash-tile span:last-child{font-size:11px;color:#718298;line-height:1.4}
+#${ROOT} .pcmt-home-statgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:13px}
+#${ROOT} .pcmt-home-stat{background:#fff;border:1px solid #e8ebf0;border-radius:12px;padding:13px 9px;text-align:center;min-width:0}
+#${ROOT} .pcmt-home-stat strong{display:block;font-size:18px;letter-spacing:-.6px;color:#2e435e}
+#${ROOT} .pcmt-home-stat span{display:block;font-size:10px;color:#7d8b9c;margin-top:3px}
+#${ROOT} .pcmt-shiny-banner{background:linear-gradient(120deg,#fff8ed,#fff);border:1px solid #f1dfba;border-radius:12px;padding:15px;margin-bottom:14px}
+#${ROOT} .pcmt-shiny-banner strong{font-size:22px;color:#9a5e23;letter-spacing:-.8px;display:block}
+#${ROOT} .pcmt-shiny-banner span{color:#a47c45;font-size:11px}
+/* Radar/HUD persistant, compact et indépendant du panneau */
+#${ROOT} .pcmt-radar{position:fixed;right:18px;bottom:79px;z-index:2147482988;width:308px;max-width:calc(100vw - 24px);color:#eaf2fc;background:linear-gradient(150deg,#1e314c,#182a40);border:1px solid #516683;border-radius:18px;box-shadow:0 17px 45px #111b3290;overflow:hidden;font-variant-numeric:tabular-nums;animation:pcmt-panel-in .23s ease-out both}
+#${ROOT} .pcmt-radar[hidden],#${ROOT}.pcmt-open .pcmt-radar{display:none!important}
+#${ROOT}.pcmt-hud-left .pcmt-radar{right:auto;left:18px}
+#${ROOT} .pcmt-radar-head{padding:12px 14px 10px;display:flex;align-items:center;gap:8px;background:#ffffff08;border-bottom:1px solid #ffffff13}
+#${ROOT} .pcmt-radar-head .pcmt-radar-icon{width:20px;height:20px;border-radius:7px;background:#f05a60;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:bold}
+#${ROOT} .pcmt-radar-head strong{font-size:10px;letter-spacing:1.45px;color:#eaf0fa}
+#${ROOT} .pcmt-radar-head .pcmt-radar-live{margin-left:auto;color:#72dbb6;font-size:9px;letter-spacing:1px;font-weight:800}
+#${ROOT} .pcmt-radar-head button{border:0;background:#ffffff12;border-radius:7px;color:#cbd8e9;font-size:14px;padding:2px 7px;line-height:21px}
+#${ROOT} .pcmt-radar-body{padding:15px 16px 13px}
+#${ROOT} .pcmt-radar-title{font-size:10px;text-transform:uppercase;color:#a7b7cc;font-weight:750;letter-spacing:1.05px}
+#${ROOT} .pcmt-radar-odds{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin:4px 0 9px}
+#${ROOT} .pcmt-radar-odds strong{font-size:31px;letter-spacing:-1.5px;font-weight:850;color:#fff;line-height:1.2}
+#${ROOT} .pcmt-radar-percent{font-size:12px;color:#ffca8a;font-weight:740}
+#${ROOT} .pcmt-radar-chancebar{height:3px;border-radius:5px;background:linear-gradient(90deg,#ee6163,#f5c75d,#8de0c0);opacity:.8;margin-bottom:13px}
+#${ROOT} .pcmt-radar-stats{display:grid;grid-template-columns:1fr 1fr;gap:9px;padding-bottom:12px}
+#${ROOT} .pcmt-radar-stat{min-width:0;background:#ffffff0a;border:1px solid #ffffff12;border-radius:10px;padding:9px 10px}
+#${ROOT} .pcmt-radar-stat span{font-size:9px;display:block;color:#9cacc3;line-height:1.35;margin-bottom:4px}
+#${ROOT} .pcmt-radar-stat strong{font-size:14px;font-weight:790;color:#f8fafe;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#${ROOT} .pcmt-radar-route{padding:9px 0;border-top:1px solid #ffffff16;display:flex;gap:8px;align-items:center;min-width:0}
+#${ROOT} .pcmt-radar-routeicon{font-size:20px;line-height:1}
+#${ROOT} .pcmt-radar-route span{display:block;font-size:9px;color:#a0b0c4;margin-bottom:3px}
+#${ROOT} .pcmt-radar-route strong{font-size:12px;color:#edf4fc;display:block;max-width:230px;white-space:nowrap;text-overflow:ellipsis;overflow:hidden}
+#${ROOT} .pcmt-radar-actions{padding:9px 12px;background:#ffffff08;display:flex;gap:8px}
+#${ROOT} .pcmt-radar-actions button{flex:1;border:1px solid #7788a44d;background:#ffffff11;color:#ebf3ff;border-radius:8px;padding:8px 5px;font-size:10px;font-weight:730}
+#${ROOT} .pcmt-radar-actions button:hover{background:#ffffff25}
+#${ROOT}.pcmt-radar-compact .pcmt-radar-body,#${ROOT}.pcmt-radar-compact .pcmt-radar-actions{display:none}
+#${ROOT}.pcmt-radar-compact .pcmt-radar{width:275px;border-radius:12px}
+#${ROOT}.pcmt-radar-compact .pcmt-radar-head{border:0;padding:9px 10px}
+#${ROOT}.pcmt-radar-compact .pcmt-radar-live{font-size:10px;color:#ffe09e}
+#${ROOT}.pcmt-hud-left .pcmt-fab{right:19px}
+#${ROOT}.theme-night{--pc-paper:#131f30;--pc-ink:#e8f3ff;--pc-line:#2e425c}
+#${ROOT}.theme-night .pcmt-panel{background:#131f30;color:#e8f3ff;border-color:#435775}
+#${ROOT}.theme-night .pcmt-header-status,#${ROOT}.theme-night .pcmt-tabs,#${ROOT}.theme-night .pcmt-favorites{background:#1a2b42;border-color:#304864;color:#c4d5e7}
+#${ROOT}.theme-night .pcmt-content{background:#142236;color:#eaf2fa}
+#${ROOT}.theme-night .pcmt-card,#${ROOT}.theme-night .pcmt-dash-tile,#${ROOT}.theme-night .pcmt-home-stat{background:#1d3149;border-color:#3a4d66;color:#eaf2fa}
+#${ROOT}.theme-night .pcmt-cardtitle,#${ROOT}.theme-night .pcmt-home-stat strong,#${ROOT}.theme-night .pcmt-dash-tile strong,#${ROOT}.theme-night .pcmt-minirow strong{color:#f4f7fd}
+#${ROOT}.theme-night .pcmt-tabs .pcmt-tab{background:#26394f;color:#cbdae9}
+#${ROOT}.theme-night .pcmt-tabs .pcmt-tab.active{background:#de4950;color:#fff;border-color:#de4950}
+#${ROOT}.theme-night .pcmt-favorites button{background:#29415c;color:#e8f3ff;border-color:#3d5777}
+#${ROOT}.theme-night .pcmt-note,#${ROOT}.theme-night .pcmt-small{color:#b5c4d6}
+#${ROOT}.theme-night .pcmt-input,#${ROOT}.theme-night .pcmt-select{background:#20344f;border-color:#536c8c;color:#f3f6ff}
+#${ROOT}.theme-night .pcmt-minirow,#${ROOT}.theme-night .pcmt-group{border-color:#3c4e66}
+#${ROOT}.theme-night .pcmt-shiny-banner{background:linear-gradient(120deg,#47332c,#2b3141);border-color:#776047}
+#${ROOT}.theme-night .pcmt-shiny-banner strong{color:#ffce86}
+@keyframes pcmt-panel-in{from{opacity:0;transform:translateY(9px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media(max-width:540px){#${ROOT} .pcmt-panel{right:9px;bottom:70px;max-height:calc(100dvh - 91px);width:calc(100vw - 18px);border-radius:17px}#${ROOT} .pcmt-head{min-height:80px}#${ROOT} .pcmt-tabs{padding:7px}#${ROOT} .pcmt-content{padding:12px}#${ROOT} .pcmt-radar{right:10px;bottom:69px;max-width:calc(100vw - 20px);width:290px}#${ROOT}.pcmt-hud-left .pcmt-radar{left:10px}#${ROOT} .pcmt-fab{right:11px;bottom:11px}}
+@media(prefers-reduced-motion:reduce){#${ROOT} *,#${ROOT} *::before,#${ROOT} *::after{animation:none!important;transition:none!important}}
+`;
     const clean = (s) => String(s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
     const esc = (s) => String(s ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
     const fmt = (n) => Number(n || 0).toLocaleString('fr-FR');
@@ -194,7 +310,7 @@
     const eggName = (id) => EGG_FR[eggKey(id)] || eggKey(id).replace(/_/g, ' ');
 
     const TAB_LIST = [
-        ['eggs','🥚 Œufs'], ['pokemon','🔎 Pokémon'], ['clicker','⚡ Auto'],
+        ['home','⌂ Accueil'], ['eggs','🥚 Œufs'], ['pokemon','🔎 Pokémon'], ['clicker','⚡ Auto'],
         ['shiny','✨ Shiny'], ['dex','📗 Pokédex'], ['routes','🧭 Routes'],
         ['balls','🔴 Balls'], ['quests','📋 Quêtes'], ['stats','📊 Stats'], ['backups','💾 Saves'],
         ['settings','⚙ Options']
@@ -217,6 +333,76 @@
         save();renderFavorites();
         if (state.tab==='settings') render();
     }
+    // Mini radar visible hors panneau. Toutes les valeurs proviennent du jeu.
+    let radar = null;
+    let hudUpdateTime = 0;
+    function makeRadar() {
+        radar=E('aside','pcmt-radar');radar.setAttribute('aria-label','PokéRadar : informations de partie');
+        const header=E('div','pcmt-radar-head');
+        const emblem=E('span','pcmt-radar-icon','✦');header.appendChild(emblem);
+        header.appendChild(E('strong','', 'POKÉRADAR'));
+        header.appendChild(E('span','pcmt-radar-live','● EN DIRECT'));
+        const collapse=E('button','',state.hudCollapsed?'⌄':'−');collapse.type='button';collapse.title='Réduire / déployer le PokéRadar';collapse.setAttribute('aria-label','Réduire ou déployer le PokéRadar');
+        collapse.onclick=()=>{state.hudCollapsed=!state.hudCollapsed;save();syncRadarVisibility();};
+        header.appendChild(collapse);radar.appendChild(header);
+        const body=E('div','pcmt-radar-body');
+        body.innerHTML=`<div class="pcmt-radar-title">✨ CHANCE SHINY · PROCHAINE RENCONTRE</div>
+        <div class="pcmt-radar-odds"><strong id="pcmt-hud-odds">—</strong><span class="pcmt-radar-percent" id="pcmt-hud-percent">—</span></div>
+        <div class="pcmt-radar-chancebar" role="presentation"></div>
+        <div class="pcmt-radar-stats">
+          <div class="pcmt-radar-stat"><span>Shinies capturés · total</span><strong id="pcmt-hud-shinies">—</strong></div>
+          <div class="pcmt-radar-stat"><span>Rencontres / min</span><strong id="pcmt-hud-rate">—</strong></div>
+          <div class="pcmt-radar-stat"><span>Depuis dernier shiny · route</span><strong id="pcmt-hud-since">—</strong></div>
+          <div class="pcmt-radar-stat"><span>Autoclicker</span><strong id="pcmt-hud-auto">—</strong></div>
+        </div><div class="pcmt-radar-route"><span class="pcmt-radar-routeicon">🧭</span><div><span id="pcmt-hud-route-mode">AUTO-ROUTE</span><strong id="pcmt-hud-next-route">—</strong></div></div>`;
+        radar.appendChild(body);
+        const actions=E('div','pcmt-radar-actions');
+        for (const [tab,label] of [['shiny','✦ Shiny Hunter'],['routes','◈ Auto-route']]){
+            const btn=E('button','',label);btn.type='button';btn.onclick=()=>{togglePanel(true);selectTab(tab);};actions.appendChild(btn);
+        }
+        radar.appendChild(actions);
+        root.appendChild(radar);
+        syncRadarVisibility();updateRadar();
+    }
+    function syncRadarVisibility(){
+        if(!root)return;
+        root.classList.toggle('pcmt-radar-compact',state.hudCollapsed);
+        root.classList.toggle('pcmt-hud-left',state.hudSide==='left');
+        root.classList.toggle('pcmt-open',state.open);
+        if(radar){radar.hidden=!state.hudVisible;
+            const collapse=radar.querySelector('.pcmt-radar-head button');
+            if(collapse)collapse.textContent=state.hudCollapsed?'⌄':'−';}
+    }
+    function updateRadar(){
+        if(!radar || !state.hudVisible)return;
+        const $ = id=>radar.querySelector('#'+id);
+        const m=shinyMetrics();
+        $('pcmt-hud-odds').textContent=Number.isFinite(m.odds)?'1 / '+fmt(Math.round(m.odds)):'Indisponible';
+        $('pcmt-hud-percent').textContent=Number.isFinite(m.p)?(m.p*100).toLocaleString('fr-FR',{maximumFractionDigits:4})+' %':'—';
+        $('pcmt-hud-shinies').textContent=fmt(readStat('totalShinyPokemonCaptured'));
+        $('pcmt-hud-rate').textContent=Number.isFinite(m.rate)?(m.rate*60).toLocaleString('fr-FR',{maximumFractionDigits:1}):'Calcul…';
+        $('pcmt-hud-since').textContent=shinyTrack.key?fmt(shinyTrack.sinceLastShiny):'—';
+        $('pcmt-hud-auto').textContent=state.enabled?(state.turbo?'Turbo · '+state.cps+'/s':'Actif · '+state.cps+'/s'):'En pause';
+        const active=safe(()=>App.game.gameState===GameConstants.GameState.fighting,false);
+        let routeText=active?String(safe(()=>Routes.getName(player.route,player.region),'Route actuelle')):'Hors route';
+        let modeText=state.autoRoute?'● AUTO-ROUTE ACTIVE':'○ AUTO-ROUTE EN PAUSE';
+        if(active){
+            const candidates=bestRouteCandidate(Number(player.region),state.routeMode);
+            const other=candidates.filter(r=>r.number!==Number(player.route));
+            const target=state.routeMode==='missing'?other[0]:(other.find(r=>r.number!==state.routePrevious)||other[0]);
+            if(target)routeText=(state.autoRoute?'À suivre : ':'Suggestion : ')+target.label;
+            else if(state.routeMode==='missing'&&candidates.some(r=>r.number===Number(player.route))){routeText='Objectif : terminer la route actuelle';}
+            else if(candidates.length===1){routeText='Objectif : '+candidates[0].label;}
+            else routeText='Aucune autre route disponible';
+        }
+        $('pcmt-hud-route-mode').textContent=modeText;
+        $('pcmt-hud-next-route').textContent=routeText;
+        $('pcmt-hud-next-route').title=routeText;
+        if(state.hudCollapsed){const tag=radar.querySelector('.pcmt-radar-live'); if(tag)tag.textContent=Number.isFinite(m.odds)?'✨ 1/'+fmt(Math.round(m.odds)):'● LIVE';}
+        else{const tag=radar.querySelector('.pcmt-radar-live'); if(tag)tag.textContent='● EN DIRECT';}
+        hudUpdateTime=Date.now();
+    }
+
     function renderFavorites() {
         if (!favBar) return;
         favBar.replaceChildren();
@@ -236,7 +422,8 @@
             routeMode:state.routeMode,routeInterval:state.routeInterval,smartRare:state.smartRare,
             shinyMaster:state.shinyMaster,autoClaim:state.autoClaim,shinyTarget:state.shinyTarget,
             hiddenTabs:state.hiddenTabs,favorites:state.favorites,notifications:state.notifications,
-            compact:state.compact
+            compact:state.compact, hudVisible:state.hudVisible,
+            hudCollapsed:state.hudCollapsed,hudSide:state.hudSide
         })); } catch (_) { /* ignore */ }
     }
     function selectTab(tab) {
@@ -247,15 +434,17 @@
     function togglePanel(force) {
         state.open = typeof force === 'boolean' ? force : !state.open;
         panel.hidden = !state.open;
-        fab.textContent = state.open ? '✕ Fermer les outils' : '⚙ PokéTools';
+        fab.innerHTML = state.open ? '<span aria-hidden="true">✕</span><span>Fermer</span>' : '<span class="pcmt-fab-orb" aria-hidden="true"></span><span>PokéTools</span>';
+        fab.setAttribute('aria-label',state.open?'Fermer PokéTools':'Ouvrir PokéTools');
+        syncRadarVisibility();
         if (state.open) render();
     }
     function mount() {
         if (document.getElementById(ROOT)) return;
-        root = E('div'); root.id = ROOT; root.classList.toggle('compact',state.compact); root.classList.toggle('theme-night',state.theme==='night');
-        const style = E('style'); style.textContent = css+themeCss;
+        root = E('div'); root.id = ROOT; root.classList.toggle('compact',state.compact); root.classList.toggle('theme-night',state.theme==='night'); root.classList.toggle('pcmt-hud-left',state.hudSide==='left');
+        const style = E('style'); style.textContent = css+themeCss+polishCss;
         root.appendChild(style);
-        fab = E('button', 'pcmt-fab', '⚙ PokéTools');
+        fab = E('button', 'pcmt-fab'); fab.innerHTML='<span class="pcmt-fab-orb" aria-hidden="true"></span><span>PokéTools</span>'; fab.setAttribute('aria-label','Ouvrir PokéTools');
         fab.type = 'button'; fab.addEventListener('click', () => togglePanel());
         root.appendChild(fab);
         panel = E('section', 'pcmt-panel'); panel.hidden = true;
@@ -263,12 +452,13 @@
         const head = E('div', 'pcmt-head');
         const titleWrap = E('div');
         titleWrap.appendChild(E('div', 'pcmt-title', 'PokéClicker · Mini Tools'));
-        titleWrap.appendChild(E('div', 'pcmt-muted', 'v1.4.0 · 11 outils configurables'));
-        head.appendChild(titleWrap);
+        titleWrap.appendChild(E('div', 'pcmt-muted', 'v1.5.0 · 12 outils personnalisables'));
+        head.appendChild(E('span','pcmt-emblem')); head.appendChild(titleWrap);
         const close = E('button', 'pcmt-close', '×');
         close.type = 'button'; close.setAttribute('aria-label', 'Fermer');
         close.addEventListener('click', () => togglePanel(false)); head.appendChild(close);
         panel.appendChild(head);
+        const livebar=E('div','pcmt-header-status'); livebar.innerHTML='<span><span class="pcmt-live-dot"></span> OUTILS CONNECTÉS AU JEU</span><span id="pcmt-location-live">—</span>'; panel.appendChild(livebar);
         tabs = E('nav', 'pcmt-tabs');
         TAB_LIST.forEach(([id, label]) => {
             const b = E('button', 'pcmt-tab', label);
@@ -281,9 +471,14 @@
         content = E('div', 'pcmt-content'); panel.appendChild(content);
         root.appendChild(panel);
         document.body.appendChild(root);
-        selectTab('eggs');
+        makeRadar();
+        selectTab('home');
         setInterval(() => {
+            updateRadar();
+            const live=document.getElementById('pcmt-location-live');
+            if(live)live.textContent=safe(()=>regionName(player.region)+' · '+Routes.getName(player.route,player.region),regionName(safe(()=>player.region,0)));
             if (!state.open) return;
+            if (state.tab === 'home') refreshHome();
             if (state.tab === 'eggs') renderEggs();
             if (state.tab === 'clicker') refreshCounter();
             if (state.tab === 'shiny') refreshShiny();
@@ -299,9 +494,11 @@
         setupBackups();
         shinyPoll();
         setInterval(() => { shinyPoll(); pollShinyTarget(); pollSession(); },1000);
+        setInterval(updateRadar,2500);
         setInterval(() => { autoRouteTick(); autoQuestTick(); },2500);
         document.addEventListener('keydown', e => {
             if (e.key === 'Escape' && state.open) togglePanel(false);
+            if (e.altKey && e.code === 'KeyH' && !e.ctrlKey && !e.metaKey) { e.preventDefault();state.hudVisible=!state.hudVisible;save();syncRadarVisibility(); }
             if (e.altKey && e.code === 'KeyP' && !e.ctrlKey && !e.metaKey) {
                 e.preventDefault();togglePanel();
             }
@@ -311,6 +508,7 @@
     function render() {
         if (!content) return;
         content.replaceChildren();
+        if (state.tab === 'home') renderHome();
         if (state.tab === 'eggs') renderEggs();
         if (state.tab === 'pokemon') renderSearch();
         if (state.tab === 'clicker') renderClicker();
@@ -323,6 +521,40 @@
         if (state.tab === 'settings') renderSettings();
         if (state.tab === 'backups') renderBackups();
     }
+    function renderHome(){
+        content.replaceChildren();
+        const hero=E('div','pcmt-pagehero');
+        hero.innerHTML='<div class="pcmt-kicker">TON COMPAGNON DE PARTIE</div><h2>Prêt à explorer ?</h2><p>Un œil sur ta progression, un accès rapide à tes outils et tes prochaines captures.</p>';
+        content.appendChild(hero);
+        const metrics=E('div','pcmt-home-statgrid');
+        for(const [id,label] of [['pcmt-home-owned','Pokémon capturés'],['pcmt-home-shiny','Shinies attrapés'],['pcmt-home-eggs','Œufs en cours']]){
+            const c=E('div','pcmt-home-stat');const number=E('strong','', '—');number.id=id;c.appendChild(number);c.appendChild(E('span','',label));metrics.appendChild(c);
+        }
+        content.appendChild(metrics);
+        const shine=E('div','pcmt-shiny-banner');
+        shine.innerHTML='<span>✦ TA PROCHAINE RENCONTRE SHINY</span><strong id="pcmt-home-odds">—</strong><span id="pcmt-home-rate">Calcul en cours…</span>';
+        content.appendChild(shine);
+        const h=E('div','pcmt-cardtitle','Accès rapides');content.appendChild(h);
+        const grid=E('div','pcmt-dash-grid');
+        const shortcuts=[['shiny','✨','Shiny Hunter','Chances et statistiques'],['dex','📗','Pokédex','Pokémon manquants'],['clicker','⚡','Autoclicker','Vitesse et captures'],['backups','💾','Sauvegardes','Copies et restauration'],['routes','🧭','Auto-route','Ta prochaine destination'],['eggs','🥚','Œufs','Éclosions et recommandations']];
+        shortcuts.forEach(([id,emoji,name,detail])=>{
+            const b=E('button','pcmt-dash-tile');b.type='button';
+            b.appendChild(E('span','pcmt-dash-icon',emoji));b.appendChild(E('strong','',name));b.appendChild(E('span','',detail));
+            b.onclick=()=>selectTab(id);grid.appendChild(b);
+        });
+        content.appendChild(grid);
+        refreshHome();
+    }
+    function refreshHome(){
+        const owned=document.getElementById('pcmt-home-owned');if(!owned)return;
+        owned.textContent=fmt(safe(()=>pokemonList.filter(p=>caught(p.name)).length,0));
+        const shiny=document.getElementById('pcmt-home-shiny');if(shiny)shiny.textContent=fmt(readStat('totalShinyPokemonCaptured'));
+        const eggs=document.getElementById('pcmt-home-eggs');if(eggs)eggs.textContent=fmt(safe(()=>App.game.breeding.eggList.filter(x=>!x().isNone()).length,0));
+        const metrics=shinyMetrics(),odds=document.getElementById('pcmt-home-odds');
+        if(odds)odds.textContent=Number.isFinite(metrics.odds)?'1 sur '+fmt(Math.round(metrics.odds)):'—';
+        const speed=document.getElementById('pcmt-home-rate');if(speed)speed.textContent=Number.isFinite(metrics.rate)?'≈ '+(metrics.rate*60).toLocaleString('fr-FR',{maximumFractionDigits:1})+' rencontres/min · statistique, pas de compte à rebours':'Données mesurées après quelques rencontres sur une route';
+    }
+
     function renderEggs() {
         if (state.tab !== 'eggs' || !content) return;
         content.replaceChildren();
@@ -694,6 +926,7 @@
     function renderShiny() {
         const card = E('div', 'pcmt-card');
         card.appendChild(E('div', 'pcmt-cardtitle', '✨ Prochain shiny (sur une route)'));
+        const shinyHero=E('div','pcmt-shiny-banner');shinyHero.innerHTML='<span>✦ CHANCE PAR RENCONTRE</span><strong id="pcmt-shiny-hero-odds">—</strong><span>Chaque rencontre reste un tirage indépendant.</span>';card.appendChild(shinyHero);
         card.appendChild(E('p', 'pcmt-note',
             'Estimation basée sur les chances réelles du jeu, tes bonus et les rencontres par seconde mesurées. Elle concerne un shiny quelconque sur la route, pas une espèce précise.'));
         for (const [id, label] of [
@@ -720,6 +953,7 @@
         if (!$('pcmt-shiny-route')) return;
         const m = shinyMetrics();
         const active = safe(() => App.game.gameState === GameConstants.GameState.fighting, false);
+        const heroOdds=$('pcmt-shiny-hero-odds');if(heroOdds)heroOdds.textContent=Number.isFinite(m.odds)?'1 sur '+fmt(Math.round(m.odds)):'Indisponible';
         $('pcmt-shiny-route').textContent = shinyTrack.key ? shinyTrack.routeName + (active ? '' : ' (pause)') : 'Va sur une route';
         $('pcmt-shiny-odds').textContent = Number.isFinite(m.odds) ? `1 sur ${fmt(Math.round(m.odds))} (${(m.p * 100).toLocaleString('fr-FR',{maximumFractionDigits:3})} %)` : 'Indisponible';
         $('pcmt-shiny-rate').textContent = Number.isFinite(m.rate) ? `${(m.rate * 60).toLocaleString('fr-FR',{maximumFractionDigits:1})} rencontres/min` : 'Mesure en cours…';
@@ -1405,6 +1639,11 @@
             state.compact=v;root.classList.toggle('compact',v);save();
         });
         addSwitch(card,'Notifications PokéTools',state.notifications,v=>{state.notifications=v;save();});
+        const hudTitle=E('div','pcmt-cardtitle','✦ PokéRadar · aperçu en jeu');hudTitle.style.marginTop='18px';card.appendChild(hudTitle);
+        addSwitch(card,'Afficher le PokéRadar lorsque le panneau est fermé',state.hudVisible,v=>{state.hudVisible=v;save();syncRadarVisibility();updateRadar();});
+        addSwitch(card,'PokéRadar réduit (discret)',state.hudCollapsed,v=>{state.hudCollapsed=v;save();syncRadarVisibility();});
+        addSelect(card,[['right','En bas à droite'],['left','En bas à gauche']],state.hudSide,v=>{state.hudSide=v;save();syncRadarVisibility();});
+        card.appendChild(E('div','pcmt-note','Alt + H : afficher ou masquer le PokéRadar. Les statistiques et les chances shiny se mettent à jour même lorsque PokéTools est fermé.'));
         card.appendChild(E('div','pcmt-note','Alt + P : afficher/masquer PokéTools · Échap : fermer. Jusqu’à 5 favoris disponibles en accès direct.'));
         content.appendChild(card);
         const modules=E('div','pcmt-card');modules.appendChild(E('div','pcmt-cardtitle','Modules visibles dans la barre'));
@@ -1420,7 +1659,7 @@
         }
         content.appendChild(modules);
         const info=E('div','pcmt-card');info.appendChild(E('div','pcmt-cardtitle','Mises à jour et sécurité'));
-        info.appendChild(E('div','pcmt-note','Version 1.4.0. Tampermonkey télécharge les versions depuis GitHub via les liens @updateURL et @downloadURL présents dans le script. Les automatisations de déplacement et de capture restent désactivées après chaque rechargement.'));
+        info.appendChild(E('div','pcmt-note','Version 1.5.0. Tampermonkey télécharge les versions depuis GitHub via les liens @updateURL et @downloadURL présents dans le script. Les automatisations de déplacement et de capture restent désactivées après chaque rechargement.'));
         const link=E('a','pcmt-link','Consulter le script sur GitHub ↗');
         link.href='https://github.com/Ironakatina33/Clicker-game/tree/main/pokeclicker-mini-tools';link.target='_blank';link.rel='noopener noreferrer';info.appendChild(link);
         content.appendChild(info);
@@ -1438,6 +1677,6 @@
             if (++attempts > 180) { clearInterval(waiter); console.warn('[Poké Mini Tools] Le jeu n’a pas été détecté.'); }
         }, 1000);
     }
-    window.PokeMiniTools = { version:'1.4.0', open: () => togglePanel(true), close: () => togglePanel(false), stop: stopAutoClick };
+    window.PokeMiniTools = { version:'1.5.0', open: () => togglePanel(true), close: () => togglePanel(false), stop: stopAutoClick, updateRadar:()=>updateRadar() };
     boot();
 })();
